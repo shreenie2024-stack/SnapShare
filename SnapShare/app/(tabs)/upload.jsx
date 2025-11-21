@@ -1,122 +1,100 @@
-import { View, TextInput, Button, Image, StyleSheet, ImageBackground, Alert } from "react-native";
 import React, { useState } from "react";
+import { View, TextInput, Image, StyleSheet, TouchableOpacity, Text, Alert } from "react-native";
 import * as ImagePicker from "expo-image-picker";
-import { COLORS } from "../../constants/theme";
+import Animated, { FadeInUp } from "react-native-reanimated";
+
+// Temporary local storage for uploads
+export const localPosts = [];
 
 export default function UploadScreen() {
   const [image, setImage] = useState(null);
   const [caption, setCaption] = useState("");
 
-  // Pick image from gallery
   const pickImage = async () => {
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== "granted") {
-      alert("Permission denied!");
-      return;
-    }
-
     const result = await ImagePicker.launchImageLibraryAsync({
       allowsEditing: true,
       quality: 1,
     });
 
-    if (!result.canceled) {
-      setImage(result.assets[0].uri);
-    }
+    if (!result.canceled) setImage(result.assets[0].uri);
   };
 
-  // Upload image + caption to API
-  const uploadFeed = async () => {
-    if (!image || !caption) {
-      Alert.alert("Error", "Please select an image and write a caption.");
-      return;
-    }
+  const savePost = () => {
+    if (!image || !caption) return Alert.alert("Error", "Add image + caption");
 
-    try {
-      const owner = "User1"; // Replace with dynamic user if needed
+    localPosts.unshift({
+      imageUrl: image,
+      caption,
+      owner: "You",
+    });
 
-      const response = await fetch("http://localhost:3000/api/feeds", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          imageUrl: image,
-          caption,
-          owner,
-        }),
-      });
-
-      if (response.ok) {
-        Alert.alert("Success", "Your feed has been uploaded!");
-        setImage(null);
-        setCaption("");
-      } else {
-        Alert.alert("Error", "Failed to upload feed");
-      }
-    } catch (error) {
-      console.error(error);
-      Alert.alert("Error", "Something went wrong!");
-    }
+    Alert.alert("Success", "Post added!");
+    setImage(null);
+    setCaption("");
   };
 
   return (
-    <ImageBackground
-      source={{ uri: "https://res.cloudinary.com/dwk5a3uaf/image/upload/v1763635394/ae0eac0db34582cb33c877e890f91f4e_rapxjc.jpg" }}
-      style={styles.background}
-      imageStyle={{ resizeMode: "cover", opacity: 0.25 }}
-    >
-      <View style={styles.container}>
-        <Button title="PICK IMAGE" color={COLORS.primary} onPress={pickImage} />
+    <View style={styles.container}>
 
-        <TextInput
-          style={styles.input}
-          placeholder="Write caption"
-          placeholderTextColor={COLORS.primary}
-          value={caption}
-          onChangeText={setCaption}
+      <TouchableOpacity style={styles.pickButton} onPress={pickImage}>
+        <Text style={styles.buttonText}>Select Image</Text>
+      </TouchableOpacity>
+
+      <TextInput
+        style={styles.input}
+        placeholder="Write caption..."
+        placeholderTextColor="#00E5FF"
+        value={caption}
+        onChangeText={setCaption}
+      />
+
+      {image && (
+        <Animated.Image
+          entering={FadeInUp.duration(500)}
+          source={{ uri: image }}
+          style={styles.preview}
         />
+      )}
 
-        {image && (
-          <Image
-            source={{ uri: image }}
-            style={styles.preview}
-          />
-        )}
+      <TouchableOpacity style={styles.uploadButton} onPress={savePost}>
+        <Text style={styles.buttonText}>Save Post</Text>
+      </TouchableOpacity>
 
-        <View style={{ marginTop: 20 }}>
-          <Button title="UPLOAD" color={COLORS.primary} onPress={uploadFeed} />
-        </View>
-      </View>
-    </ImageBackground>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  background: {
-    flex: 1,
+  container: { flex: 1, backgroundColor: "#0D0D0D", padding: 20 },
+  pickButton: {
+    backgroundColor: "#00E5FF",
+    paddingVertical: 14,
+    borderRadius: 10,
+    alignItems: "center",
+    marginTop: 20,
   },
-  container: {
-    padding: 20,
-    flex: 1,
-    justifyContent: "flex-start",
+  uploadButton: {
+    backgroundColor: "#005A66",
+    paddingVertical: 14,
+    borderRadius: 10,
+    alignItems: "center",
+    marginTop: 30,
   },
+  buttonText: { fontSize: 16, fontWeight: "bold", color: "#FFFFFF" },
   input: {
     borderWidth: 2,
-    borderColor: COLORS.primary,
+    borderColor: "#00E5FF",
     padding: 12,
     marginTop: 15,
-    borderRadius: 12,
-    backgroundColor: COLORS.card,
-    color: COLORS.textDark,
+    borderRadius: 10,
+    backgroundColor: "#1A1A1A",
+    color: "#FFFFFF",
   },
   preview: {
-    width: "50%",       // Centered box size
-    height: 300,        // Rectangle like Instagram
+    width: "100%",
+    height: 350,
     borderRadius: 15,
     marginTop: 20,
-    resizeMode: "contain",
-    alignSelf: "center", // Correct spelling for centering
-    //backgroundColor: "#f0f0f0", // optional background for letterboxing
+    resizeMode: "cover",
   },
 });
